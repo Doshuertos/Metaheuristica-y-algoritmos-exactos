@@ -16,31 +16,18 @@ namespace fs = std::filesystem;
 using Clock     = std::chrono::steady_clock;
 using TimePoint = std::chrono::time_point<Clock>;
 
-// ─────────────────────────────────────────────────────────────────
-// Resultado: lo que devuelve el algoritmo al terminar
-// ─────────────────────────────────────────────────────────────────
-
 struct Resultado {
     double costo = std::numeric_limits<double>::infinity();
     std::vector<std::vector<std::pair<Avion, int>>> plan;
 };
 
-// ─────────────────────────────────────────────────────────────────
-// Metricas: contadores internos del algoritmo
-// ─────────────────────────────────────────────────────────────────
-
 struct Metricas {
     long long nodos_explorados     = 0;  // cuántos nodos visitó el árbol
     long long soluciones_factibles = 0;  // cuántas veces llegó al caso base
-    long long factible_ok          = 0;  // es_factible() devolvió true
-    long long factible_fallo       = 0;  // es_factible() devolvió false (podas)
+    long long factible_ok          = 0;  // no poda
+    long long factible_fallo       = 0;  // poda
 };
 
-// ─────────────────────────────────────────────────────────────────
-// guardar_csv: reemplaza a matplotlib
-// guarda los datos de cada gráfico en un archivo .csv
-// "static" = solo visible en este .cpp, evita conflictos al enlazar
-// ─────────────────────────────────────────────────────────────────
 
 static void guardar_csv(const std::string& ruta,
                         const std::string& col_x, const std::string& col_y,
@@ -52,11 +39,8 @@ static void guardar_csv(const std::string& ruta,
         f << xs[i] << "," << ys[i] << "\n";       // un par de datos por línea
 }
 
-// ─────────────────────────────────────────────────────────────────
-// Función principal
-// devuelve pair<Resultado, Metricas> → equivale a: return mejor_estado, metricas
-// ─────────────────────────────────────────────────────────────────
 
+// devuelve pair<Resultado, Metricas> → equivale a: return mejor_estado, metricas
 std::pair<Resultado, Metricas>
 backtracking_cronologico(const std::vector<Avion>& aviones_entrada,
                          int tiempo_limite_seg       = 1200,  // 20 min por defecto
@@ -91,13 +75,6 @@ backtracking_cronologico(const std::vector<Avion>& aviones_entrada,
 
     // histograma: cuántos nodos se exploraron en cada nivel del árbol
     std::vector<double> nodos_por_nivel(total + 1, 0.0);
-
-    // ─────────────────────────────────────────────────────────────
-    // Lambda recursiva — equivale a def resolver(idx): en Python
-    //
-    // std::function<void(int)> permite que la lambda se llame a sí misma
-    // [&] captura todo por referencia → equivale al nonlocal de Python
-    // ─────────────────────────────────────────────────────────────
 
     std::function<void(int)> resolver = [&](int idx) {
 
