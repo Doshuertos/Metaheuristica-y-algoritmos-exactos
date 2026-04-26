@@ -40,34 +40,29 @@ static void guardar_csv(const std::string& ruta,
 }
 
 
-// devuelve pair<Resultado, Metricas> → equivale a: return mejor_estado, metricas
 std::pair<Resultado, Metricas>
 backtracking_cronologico(const std::vector<Avion>& aviones_entrada,
-                         int tiempo_limite_seg       = 1200,  // 20 min por defecto
+                         int tiempo_limite_seg       = 1200, 
                          const std::string& nombre_caso = "caso",
                          int num_pistas              = 3)
 {
-    // pistas[i] = aviones asignados a la pista i con su tiempo
-    // equivale a: pistas = [[] for _ in range(num_pistas)]
     std::vector<std::vector<std::pair<Avion, int>>> pistas(num_pistas);
 
     Resultado mejor;   // costo = infinito al inicio
     Metricas  stats;   // todos los contadores en 0
 
-    // flag de tiempo límite — reemplaza la excepción TimeoutError de Python
     bool timeout = false;
 
     // copia local para poder ordenar sin modificar el problema original
     std::vector<Avion> aviones = aviones_entrada;
 
-    // equivale a: sorted(problema.aviones, key=lambda x: x.p)
     std::sort(aviones.begin(), aviones.end(),
               [](const Avion& a, const Avion& b){ return a.Pk < b.Pk; });
 
     int total  = static_cast<int>(aviones.size());
     TimePoint t0 = Clock::now();  // instante de inicio del reloj
 
-    // ── series de datos para los CSVs (equivalen a las listas de Python) ──
+    // ── series de datos para los CSVs ──
     std::vector<double> tiempos_nodos, serie_nodos;
     std::vector<double> tiempos_costos, serie_costos;
     std::vector<double> tiempos_poda,   serie_poda;
@@ -85,10 +80,8 @@ backtracking_cronologico(const std::vector<Avion>& aviones_entrada,
         nodos_por_nivel[idx]++;
 
         // tiempo transcurrido en segundos
-        // equivale a: tiempo_actual = time.time() - start_time
         double seg = std::chrono::duration<double>(Clock::now() - t0).count();
 
-        // .push_back() = .append() de Python
         tiempos_nodos.push_back(seg);
         serie_nodos.push_back(static_cast<double>(stats.nodos_explorados));
 
@@ -100,7 +93,6 @@ backtracking_cronologico(const std::vector<Avion>& aviones_entrada,
                 static_cast<double>(stats.factible_fallo) / total_checks);
         }
 
-        // equivale al: if tiempo_actual > tiempo_limite_seg: raise TimeoutError
         if (seg > tiempo_limite_seg) { timeout = true; return; }
 
         // ── CASO BASE: se asignaron todos los aviones ──
@@ -116,8 +108,6 @@ backtracking_cronologico(const std::vector<Avion>& aviones_entrada,
             if (costo_total < mejor.costo) {
                 mejor.costo = costo_total;
 
-                // copia profunda automática (vector de structs por valor)
-                // equivale al copy.deepcopy(pistas) de Python
                 mejor.plan = pistas;
 
                 tiempos_costos.push_back(seg);
@@ -169,7 +159,6 @@ backtracking_cronologico(const std::vector<Avion>& aviones_entrada,
 
     std::string base = "ejecuciones/backtracking/" + nombre_caso;
 
-    // equivale a: os.makedirs(ruta_base, exist_ok=True)
     fs::create_directories(base);
 
     // un CSV por cada gráfico que antes hacía matplotlib
@@ -190,15 +179,13 @@ backtracking_cronologico(const std::vector<Avion>& aviones_entrada,
 
     {
         // rellena 0, 1, 2, ..., total
-        // equivale al range(len(nodos_por_nivel)) del bar chart de Python
         std::vector<double> niveles(total + 1);
         std::iota(niveles.begin(), niveles.end(), 0.0);
         guardar_csv(base + "/nodos_por_nivel.csv",
                     "nivel", "nodos", niveles, nodos_por_nivel);
     }
 
-    // metricas.txt — mismo contenido que en Python
-    {
+    // metricas.txt 
         std::ofstream f(base + "/metricas.txt");
         f << "BACKTRACKING\n----------------------------------------\n";
         f << "Mejor Costo: " << mejor.costo << "\n\n";
@@ -224,6 +211,5 @@ backtracking_cronologico(const std::vector<Avion>& aviones_entrada,
         f << "es_factible = False: "  << stats.factible_fallo      << "\n";
     }
 
-    // equivale al: return mejor_estado, metricas
     return {mejor, stats};
 }
