@@ -161,7 +161,6 @@ backtracking_cronologico(const std::vector<Avion>& aviones_entrada,
 
     fs::create_directories(base);
 
-    // un CSV por cada gráfico que antes hacía matplotlib
     guardar_csv(base + "/nodos_vs_tiempo.csv",
                 "tiempo_s", "nodos", tiempos_nodos, serie_nodos);
 
