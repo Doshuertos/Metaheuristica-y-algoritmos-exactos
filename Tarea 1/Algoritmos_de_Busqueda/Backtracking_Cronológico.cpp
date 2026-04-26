@@ -7,8 +7,10 @@
 #include <functional>   
 #include <iostream>   
 #include <numeric>     
+#include <string>
 
-#include "modelo.h" 
+#include "../Clase/Avion.h"
+#include "../Utilidades/Factivilidad.h"
 
 namespace fs = std::filesystem;
 using Clock     = std::chrono::steady_clock;
@@ -56,7 +58,7 @@ static void guardar_csv(const std::string& ruta,
 // ─────────────────────────────────────────────────────────────────
 
 std::pair<Resultado, Metricas>
-backtracking_cronologico(const ProblemaALP& problema,
+backtracking_cronologico(const std::vector<Avion>& aviones_entrada,
                          int tiempo_limite_seg       = 1200,  // 20 min por defecto
                          const std::string& nombre_caso = "caso",
                          int num_pistas              = 3)
@@ -72,11 +74,11 @@ backtracking_cronologico(const ProblemaALP& problema,
     bool timeout = false;
 
     // copia local para poder ordenar sin modificar el problema original
-    std::vector<Avion> aviones = problema.aviones;
+    std::vector<Avion> aviones = aviones_entrada;
 
     // equivale a: sorted(problema.aviones, key=lambda x: x.p)
     std::sort(aviones.begin(), aviones.end(),
-              [](const Avion& a, const Avion& b){ return a.p < b.p; });
+              [](const Avion& a, const Avion& b){ return a.Pk < b.Pk; });
 
     int total  = static_cast<int>(aviones.size());
     TimePoint t0 = Clock::now();  // instante de inicio del reloj
@@ -132,7 +134,7 @@ backtracking_cronologico(const ProblemaALP& problema,
             double costo_total = 0.0;
             for (auto& pista : pistas)
                 for (auto& [av, t] : pista)   // [av,t] = desestructuración del pair
-                    costo_total += av.calcular_f_tk(t);
+                    costo_total += av.Calcular_Penalizaciones(t);
 
             if (costo_total < mejor.costo) {
                 mejor.costo = costo_total;
@@ -157,9 +159,9 @@ backtracking_cronologico(const ProblemaALP& problema,
 
         // && !timeout en los for evita seguir iterando si se agotó el tiempo
         for (int p = 0; p < num_pistas && !timeout; ++p) {
-            for (int t = av.e; t <= av.l && !timeout; ++t) {
+            for (int t = av.Ek; t <= av.Lk && !timeout; ++t) {
 
-                if (problema.es_factible(av, t, pistas[p])) {
+                if (es_factible(av, t, pistas[p])) {
                     stats.factible_ok++;
 
                     pistas[p].push_back({av, t});  // asigna → pistas[p].append(...)
@@ -234,7 +236,7 @@ backtracking_cronologico(const ProblemaALP& problema,
 
                 f << "Pista " << (i + 1) << ":\n";
                 for (auto& [av, t] : pista)
-                    f << "  [T=" << t << "] Avion " << av.id << "\n";
+                    f << "  [T=" << t << "] Avion " << av.id_avion << "\n";
             }
         }
 
