@@ -2,6 +2,7 @@
 #include <algorithm>  
 #include <limits>
 #include <chrono>      
+#include <cmath>
 #include <fstream> 
 #include <filesystem>  
 #include <functional>   
@@ -11,23 +12,11 @@
 
 #include "../Clase/Avion.h"
 #include "../Utilidades/Factivilidad.h"
+#include "Backtracking_Cronológico.h"
 
 namespace fs = std::filesystem;
 using Clock     = std::chrono::steady_clock;
 using TimePoint = std::chrono::time_point<Clock>;
-
-struct Resultado {
-    double costo = std::numeric_limits<double>::infinity();
-    std::vector<std::vector<std::pair<Avion, int>>> plan;
-};
-
-struct Metricas {
-    long long nodos_explorados     = 0;  // cuántos nodos visitó el árbol
-    long long soluciones_factibles = 0;  // cuántas veces llegó al caso base
-    long long factible_ok          = 0;  // no poda
-    long long factible_fallo       = 0;  // poda
-};
-
 
 static void guardar_csv(const std::string& ruta,
                         const std::string& col_x, const std::string& col_y,
@@ -42,9 +31,9 @@ static void guardar_csv(const std::string& ruta,
 
 std::pair<Resultado, Metricas>
 backtracking_cronologico(const std::vector<Avion>& aviones_entrada,
-                         int tiempo_limite_seg       = 1200, 
-                         const std::string& nombre_caso = "caso",
-                         int num_pistas              = 3)
+                         int tiempo_limite_seg,
+                         const std::string& nombre_caso,
+                         int num_pistas)
 {
     std::vector<std::vector<std::pair<Avion, int>>> pistas(num_pistas);
 
@@ -52,6 +41,8 @@ backtracking_cronologico(const std::vector<Avion>& aviones_entrada,
     Metricas  stats;   // todos los contadores en 0
 
     bool timeout = false;
+    int ultimo_log_seg = -1;
+    int ultimo_mejor_seg = 0;
 
     // copia local para poder ordenar sin modificar el problema original
     std::vector<Avion> aviones = aviones_entrada;
@@ -81,6 +72,7 @@ backtracking_cronologico(const std::vector<Avion>& aviones_entrada,
 
         // tiempo transcurrido en segundos
         double seg = std::chrono::duration<double>(Clock::now() - t0).count();
+        int seg_int = static_cast<int>(seg);
 
         tiempos_nodos.push_back(seg);
         serie_nodos.push_back(static_cast<double>(stats.nodos_explorados));
@@ -93,7 +85,19 @@ backtracking_cronologico(const std::vector<Avion>& aviones_entrada,
                 static_cast<double>(stats.factible_fallo) / total_checks);
         }
 
-        if (seg > tiempo_limite_seg) { timeout = true; return; }
+        if (seg >= tiempo_limite_seg) { timeout = true; return; }
+
+        // Log de progreso cada 10 segundos para saber que el algoritmo sigue activo.
+        if (seg_int / 10 > ultimo_log_seg / 10) {
+            ultimo_log_seg = seg_int;
+            int sin_mejora = seg_int - ultimo_mejor_seg;
+            std::cout << "    Progreso -> T=" << seg_int
+                      << "s, nodos=" << stats.nodos_explorados
+                      << ", mejor=";
+            if (std::isfinite(mejor.costo)) std::cout << mejor.costo;
+            else std::cout << "INF";
+            std::cout << ", sin mejora=" << sin_mejora << "s\n";
+        }
 
         // ── CASO BASE: se asignaron todos los aviones ──
         if (idx == total) {
@@ -107,6 +111,7 @@ backtracking_cronologico(const std::vector<Avion>& aviones_entrada,
 
             if (costo_total < mejor.costo) {
                 mejor.costo = costo_total;
+                ultimo_mejor_seg = seg_int;
 
                 mejor.plan = pistas;
 
@@ -148,10 +153,15 @@ backtracking_cronologico(const std::vector<Avion>& aviones_entrada,
 
     resolver(0);  // empieza desde el avión 0
 
+    double tiempo_total_seg = std::chrono::duration<double>(Clock::now() - t0).count();
     if (timeout)
-        std::cout << "\nTiempo limite alcanzado\n";
+        std::cout << "\nTiempo limite alcanzado (Tiempo total: "
+                  << tiempo_total_seg << " s)\n";
     else
-        std::cout << "\n--- El algoritmo termino de explorar todo el espacio.\n";
+        std::cout << "\n--- El algoritmo termino de explorar todo el espacio "
+                  << "(Tiempo total: " << tiempo_total_seg << " s).\n";
+
+    std::cout << "Guardando metricas y resultados en disco...\n";
 
     // ─────────────────────────────────────────────────────────────
     // Persistencia de resultados
@@ -159,24 +169,39 @@ backtracking_cronologico(const std::vector<Avion>& aviones_entrada,
 
     std::string base = "ejecuciones/backtracking/" + nombre_caso;
 
+    std::cout << "  [1/7] Preparando carpeta de salida...\n";
     fs::create_directories(base);
 
+    std::cout << "  [2/7] Guardando nodos_vs_tiempo.csv...\n";
     guardar_csv(base + "/nodos_vs_tiempo.csv",
                 "tiempo_s", "nodos", tiempos_nodos, serie_nodos);
 
-    if (!tiempos_costos.empty())
+    if (!tiempos_costos.empty()) {
+        std::cout << "  [3/7] Guardando costo_vs_tiempo.csv...\n";
         guardar_csv(base + "/costo_vs_tiempo.csv",
                     "tiempo_s", "costo", tiempos_costos, serie_costos);
+    } else {
+        std::cout << "  [3/7] Saltado costo_vs_tiempo.csv (sin mejoras registradas).\n";
+    }
 
-    if (!tiempos_poda.empty())
+    if (!tiempos_poda.empty()) {
+        std::cout << "  [4/7] Guardando poda_vs_tiempo.csv...\n";
         guardar_csv(base + "/poda_vs_tiempo.csv",
                     "tiempo_s", "tasa_poda", tiempos_poda, serie_poda);
+    } else {
+        std::cout << "  [4/7] Saltado poda_vs_tiempo.csv (sin datos de poda).\n";
+    }
 
-    if (!nodos_costos.empty())
+    if (!nodos_costos.empty()) {
+        std::cout << "  [5/7] Guardando costo_vs_nodos.csv...\n";
         guardar_csv(base + "/costo_vs_nodos.csv",
                     "nodos", "costo", nodos_costos, costos_por_nodo);
+    } else {
+        std::cout << "  [5/7] Saltado costo_vs_nodos.csv (sin mejoras registradas).\n";
+    }
 
     {
+        std::cout << "  [6/7] Guardando nodos_por_nivel.csv...\n";
         // rellena 0, 1, 2, ..., total
         std::vector<double> niveles(total + 1);
         std::iota(niveles.begin(), niveles.end(), 0.0);
@@ -185,6 +210,7 @@ backtracking_cronologico(const std::vector<Avion>& aviones_entrada,
     }
 
     // metricas.txt 
+        std::cout << "  [7/7] Guardando metricas.txt...\n";
         std::ofstream f(base + "/metricas.txt");
         f << "BACKTRACKING\n----------------------------------------\n";
         f << "Mejor Costo: " << mejor.costo << "\n\n";
@@ -208,7 +234,6 @@ backtracking_cronologico(const std::vector<Avion>& aviones_entrada,
         f << "Soluciones factibles: " << stats.soluciones_factibles << "\n";
         f << "es_factible = True: "   << stats.factible_ok         << "\n";
         f << "es_factible = False: "  << stats.factible_fallo      << "\n";
-    }
-
+    std::cout << "Persistencia completada.\n";
     return {mejor, stats};
 }
