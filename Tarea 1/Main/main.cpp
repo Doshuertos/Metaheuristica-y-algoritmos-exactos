@@ -1,36 +1,40 @@
-#include <iostream>
+#include "Lector.h"
 #include <vector>
-#include "../Clase/Avion.h"
-#include "../Utilidades/Lector.h"
 
 using namespace std;
 
+extern vector<Avion> aviones;
+extern int D;
+extern int num_pistas;
+
+vector<int> T_asig;
+vector<int> pista_asig;
+
 int main() {
-    vector<Avion> aviones;
-    int n = 0;
 
-    string ruta = "/home/doshuertos/Tarea IAM/Tarea 1/Test_Case/case1.txt";
+    vector<Avion> lista;
+    int n;
 
-    cargarArchivo(ruta, aviones, n);
+    cargarArchivo("case1.txt", lista, n);
 
-    cout << "==============================" << endl;
-    cout << "Aviones cargados: " << n << endl;
-    cout << "==============================" << endl;
+    aviones = lista;
+    D = n;
+    num_pistas = 3;
 
-    for (const auto& a : aviones) {
-        cout << "ID: " << a.id_avion
-             << " Ek: " << a.Ek
-             << " Pk: " << a.Pk
-             << " Lk: " << a.Lk
-             << endl;
-    }
-    cout << "\nPrueba de separaciones:\n";
+    T_asig.assign(D, -1);
+    pista_asig.assign(D, -1);
 
-    for (int i = 0; i < 3; i++) { // solo los primeros 3
-        for (int j = 0; j < 15; j++) {
-            cout << aviones[i].Vector_Separacion_Tau[j] << " ";
+    vector<vector<Opcion>> dominios(D);
+
+    for (int i = 0; i < D; i++) {
+        for (int p = 0; p < num_pistas; p++) {
+            for (int t = aviones[i].Ek; t <= aviones[i].Lk; t++) {
+                dominios[i].push_back({p, t});
+            }
         }
-        cout << endl;
     }
-    return 0;
+
+    FC(0, dominios, 0.0);
+
+    cout << "Mejor costo: " << mejor_costo << endl;
 }
