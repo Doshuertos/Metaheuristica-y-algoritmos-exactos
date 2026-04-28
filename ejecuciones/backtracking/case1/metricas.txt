@@ -22,7 +22,7 @@ Pista 2:
 Pista 3:
 
 METRICAS
-Nodos explorados: 536870914
-Soluciones factibles: 536537643
-es_factible = True: 536870913
-es_factible = False: 3023284
+Nodos explorados: 873620799
+Soluciones factibles: 873078411
+es_factible = True: 873620798
+es_factible = False: 5054387

@@ -1,0 +1,113 @@
+BACKTRACKING
+----------------------------------------
+Mejor Costo: 31640.5
+
+Pista 1:
+  [T=601] Avion 1
+  [T=725] Avion 2
+  [T=928] Avion 3
+  [T=996] Avion 4
+  [T=1119] Avion 6
+  [T=1232] Avion 10
+  [T=1300] Avion 8
+  [T=1413] Avion 7
+  [T=1481] Avion 9
+  [T=1549] Avion 5
+  [T=1639] Avion 12
+  [T=1752] Avion 13
+  [T=1820] Avion 11
+  [T=1933] Avion 14
+  [T=2001] Avion 16
+  [T=2069] Avion 17
+  [T=2159] Avion 18
+  [T=2249] Avion 15
+  [T=2340] Avion 20
+  [T=2430] Avion 19
+  [T=2705] Avion 22
+  [T=2803] Avion 24
+  [T=2871] Avion 23
+  [T=2961] Avion 21
+  [T=3074] Avion 25
+  [T=3246] Avion 26
+  [T=3335] Avion 27
+  [T=3448] Avion 30
+  [T=3516] Avion 31
+  [T=3629] Avion 29
+  [T=3697] Avion 34
+  [T=3810] Avion 28
+  [T=3878] Avion 33
+  [T=3991] Avion 35
+  [T=4081] Avion 32
+  [T=4149] Avion 36
+  [T=4217] Avion 37
+  [T=4376] Avion 40
+  [T=4466] Avion 38
+  [T=4556] Avion 41
+  [T=4669] Avion 39
+  [T=4894] Avion 42
+  [T=4982] Avion 44
+  [T=5145] Avion 47
+  [T=5213] Avion 45
+  [T=5303] Avion 46
+  [T=5371] Avion 43
+  [T=5484] Avion 50
+  [T=5552] Avion 51
+  [T=5620] Avion 48
+  [T=5733] Avion 49
+  [T=5801] Avion 52
+  [T=5914] Avion 54
+  [T=6004] Avion 53
+  [T=6072] Avion 55
+  [T=6208] Avion 59
+  [T=6321] Avion 57
+  [T=6389] Avion 58
+  [T=6502] Avion 56
+  [T=6582] Avion 60
+  [T=6842] Avion 61
+  [T=7168] Avion 62
+  [T=7258] Avion 63
+  [T=7508] Avion 64
+  [T=7635] Avion 66
+  [T=7725] Avion 67
+  [T=7838] Avion 68
+  [T=7928] Avion 65
+  [T=8071] Avion 69
+  [T=8152] Avion 70
+  [T=8244] Avion 71
+  [T=8350] Avion 72
+  [T=8623] Avion 73
+  [T=9001] Avion 74
+  [T=9365] Avion 75
+  [T=9630] Avion 77
+  [T=9698] Avion 76
+  [T=9822] Avion 79
+  [T=9912] Avion 78
+  [T=10119] Avion 80
+  [T=10187] Avion 81
+  [T=10444] Avion 85
+  [T=10512] Avion 82
+  [T=10580] Avion 84
+  [T=10648] Avion 83
+  [T=10741] Avion 86
+  [T=10858] Avion 88
+  [T=10926] Avion 87
+  [T=11043] Avion 90
+  [T=11133] Avion 89
+  [T=11223] Avion 91
+  [T=11313] Avion 92
+  [T=11570] Avion 93
+  [T=11737] Avion 95
+  [T=11850] Avion 94
+  [T=11942] Avion 96
+  [T=12136] Avion 98
+  [T=12259] Avion 99
+  [T=12655] Avion 97
+Pista 2:
+  [T=12691] Avion 100
+Pista 3:
+
+METRICAS
+Nodos explorados: 286059720
+Soluciones factibles: 286005017
+es_factible = True: 286059719
+es_factible = False: 8974725

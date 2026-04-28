@@ -18,6 +18,14 @@ namespace fs = std::filesystem;
 using Clock     = std::chrono::steady_clock;
 using TimePoint = std::chrono::time_point<Clock>;
 
+// Muestreo para CSV: mas denso que antes (mejor para analisis) sin volver a
+// una fila por nodo (eso generaba archivos enormes y lentos).
+// Cota aproximada: ~600/intervalo muestras por tiempo + nodos/salto por eje nodos.
+namespace {
+constexpr double kMuestraMinIntervaloSeg = 0.05;
+constexpr long long kMuestraSaltoNodos   = 50'000;
+}
+
 static void guardar_csv(const std::string& ruta,
                         const std::string& col_x, const std::string& col_y,
                         const std::vector<double>& xs, const std::vector<double>& ys)
@@ -43,6 +51,10 @@ backtracking_cronologico(const std::vector<Avion>& aviones_entrada,
     bool timeout = false;
     int ultimo_log_seg = -1;
     int ultimo_mejor_seg = 0;
+
+    bool primera_muestra_csv = true;
+    double ult_muestra_seg = 0.0;
+    long long ult_muestra_nodo = 0;
 
     // copia local para poder ordenar sin modificar el problema original
     std::vector<Avion> aviones = aviones_entrada;
@@ -74,15 +86,27 @@ backtracking_cronologico(const std::vector<Avion>& aviones_entrada,
         double seg = std::chrono::duration<double>(Clock::now() - t0).count();
         int seg_int = static_cast<int>(seg);
 
-        tiempos_nodos.push_back(seg);
-        serie_nodos.push_back(static_cast<double>(stats.nodos_explorados));
-
         // tasa de poda = proporción de veces que es_factible devolvió false
         long long total_checks = stats.factible_ok + stats.factible_fallo;
-        if (total_checks > 0) {
-            tiempos_poda.push_back(seg);
-            serie_poda.push_back(
-                static_cast<double>(stats.factible_fallo) / total_checks);
+
+        bool tomar_muestra = primera_muestra_csv;
+        if (!tomar_muestra) {
+            if (seg - ult_muestra_seg >= kMuestraMinIntervaloSeg)
+                tomar_muestra = true;
+            if (stats.nodos_explorados - ult_muestra_nodo >= kMuestraSaltoNodos)
+                tomar_muestra = true;
+        }
+        if (tomar_muestra) {
+            primera_muestra_csv = false;
+            ult_muestra_seg = seg;
+            ult_muestra_nodo = stats.nodos_explorados;
+            tiempos_nodos.push_back(seg);
+            serie_nodos.push_back(static_cast<double>(stats.nodos_explorados));
+            if (total_checks > 0) {
+                tiempos_poda.push_back(seg);
+                serie_poda.push_back(
+                    static_cast<double>(stats.factible_fallo) / total_checks);
+            }
         }
 
         if (seg >= tiempo_limite_seg) { timeout = true; return; }
@@ -152,6 +176,28 @@ backtracking_cronologico(const std::vector<Avion>& aviones_entrada,
               << ", Limite: " << tiempo_limite_seg / 60.0 << " min)...\n";
 
     resolver(0);  // empieza desde el avión 0
+
+    {
+        double seg_fin =
+            std::chrono::duration<double>(Clock::now() - t0).count();
+        if (!tiempos_nodos.empty()) {
+            bool distinto =
+                (std::abs(tiempos_nodos.back() - seg_fin) > 1e-9) ||
+                (serie_nodos.back() !=
+                 static_cast<double>(stats.nodos_explorados));
+            if (distinto) {
+                tiempos_nodos.push_back(seg_fin);
+                serie_nodos.push_back(
+                    static_cast<double>(stats.nodos_explorados));
+                long long tc = stats.factible_ok + stats.factible_fallo;
+                if (tc > 0) {
+                    tiempos_poda.push_back(seg_fin);
+                    serie_poda.push_back(
+                        static_cast<double>(stats.factible_fallo) / tc);
+                }
+            }
+        }
+    }
 
     double tiempo_total_seg = std::chrono::duration<double>(Clock::now() - t0).count();
     if (timeout)

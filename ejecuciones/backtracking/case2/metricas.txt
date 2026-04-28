@@ -1,0 +1,33 @@
+BACKTRACKING
+----------------------------------------
+Mejor Costo: 4710
+
+Pista 1:
+  [T=75] Avion 1
+  [T=95] Avion 6
+  [T=103] Avion 8
+  [T=111] Avion 4
+  [T=119] Avion 12
+  [T=127] Avion 10
+  [T=135] Avion 9
+  [T=143] Avion 11
+  [T=158] Avion 3
+  [T=173] Avion 19
+  [T=181] Avion 20
+  [T=196] Avion 2
+  [T=199] Avion 7
+  [T=202] Avion 5
+  [T=214] Avion 15
+  [T=237] Avion 18
+  [T=250] Avion 14
+  [T=336] Avion 13
+  [T=409] Avion 16
+Pista 2:
+  [T=338] Avion 17
+Pista 3:
+
+METRICAS
+Nodos explorados: 656049089
+Soluciones factibles: 655715268
+es_factible = True: 656049088
+es_factible = False: 2809185
