@@ -4,166 +4,143 @@
 #include <limits>
 #include <chrono>
 #include <iomanip>
-#include <fstream> 
+#include <fstream> // Necesario para guardar archivos
 
 #include "Lector.h" 
 #include "Avion.h"
 
 using namespace std;
 
-struct Opcion {
-    int pista;
-    int tiempo;
-    double costo_individual;
+class Opcion {
+
+    public : 
+        int Pista_a_usar;
+        int tiempo;
+        float costo_individual;
+    
+    Opcion(int pista, int Tiempo, float costo) : Pista_a_usar(pista) , tiempo(Tiempo) , costo_individual(costo) {};
+
 };
 
-// -------- MÉTRICAS GLOBALES --------
-double mejor_costo = numeric_limits<double>::infinity();
-long long nodos_explorados = 0;
-long long podas_forward = 0;      // Por dominio vacío
-long long podas_costo = 0;        // Por Branch & Bound
-long long valores_eliminados = 0; // Total de (t,p) quitados por FC
 
-// Vectores para gráficos
-vector<double> registro_tiempos;
-vector<double> registro_costos;
-vector<long long> nodos_por_nivel;
 
-int total_aviones;
-vector<Avion> lista_aviones;
-auto hora_inicio_algoritmo = chrono::high_resolution_clock::now();
+//Se debe filtrar el dominio mediante las restricciones, donde utilizaremos Tj​≥Ti​+τij​​ (si i llega antes) o Ti​≥Tj​+τji​ (si J llega antes) para podar deberia ser un bool y como es un arbol se trabaja con  recursividad
+//Variables globales Gerenciamento de memória
+int Cantidad_de_Aviones = 0;
+vector<Avion>Aviones;
+float mejor_costo = numeric_limits<double>::infinity() ;
 
-bool filtrar_dominios(int idx_actual, const Opcion& asig, 
-                      const vector<vector<Opcion>>& dominios_viejos, 
-                      vector<vector<Opcion>>& dominios_nuevos) {
+bool Acotar_Arbol(int id, const Opcion& Asignada, const vector<vector<Opcion>>& dominios_viejos, vector<vector<Opcion>>& dominios_nuevos ) { 
+    //const Opcion& , al trabajar con memoria usar const para que no tengamos problemas al acotar y ir pasando el Stack de los dominios
+    //const vector<vector<Opcion>>& dominios_viejos, lo guardamos para el momento de retrocedes no perder toda la informacion se utiliza el const para que no se modifique nunca por accidente
+    //vector<vector<Opcion>>& dominios_nuevos, para ir guardando los dominios que se van generando , para luego pasarlos a dominios viejos 
+
+    dominios_nuevos = dominios_viejos; // para trabajar con los dominios anteriores
+    Avion actual = Aviones[id];
     
-    dominios_nuevos = dominios_viejos;
-    const Avion& av_i = lista_aviones[idx_actual];
 
-    for (int j = idx_actual + 1; j < total_aviones; ++j) {
-        vector<Opcion> aux;
-        const Avion& av_j = lista_aviones[j];
+    for(int j = id + 1; j < Cantidad_de_Aviones; j++){//iteramos los aviones que le siguen al que va a llegar 
 
-        for (const auto& opt_j : dominios_viejos[j]) {
-            if (opt_j.pista == asig.pista) {
-                bool ok = true;
-                if (asig.tiempo < opt_j.tiempo) {
-                    if (opt_j.tiempo < asig.tiempo + av_i.Vector_Separacion_Tau[av_j.id_avion - 1]) ok = false;
-                } else {
-                    if (asig.tiempo < opt_j.tiempo + av_j.Vector_Separacion_Tau[av_i.id_avion - 1]) ok = false;
+        vector<Opcion>Nuevo_dom;
+        Avion Avion_llegada = Aviones[j]; //Guardamos los siguientes
+
+        for (int i = 0; i < dominios_viejos[j].size(); i++) { // iteramos opciones para elegir el siguiente avion 
+            bool Viable = true;
+
+            if(dominios_viejos[j][i].Pista_a_usar == Asignada.Pista_a_usar){ // Solo se activa si ambos aviones llegan a la misma pista 
+
+                if(Asignada.tiempo < dominios_viejos[j][i].tiempo){
+
+                    if(dominios_viejos[j][i].tiempo < Asignada.tiempo + actual.Vector_Separacion_Tau[Avion_llegada.id_avion-1]){
+                        Viable = false;
+                    }
+
+                }else{
+
+                    if(Asignada.tiempo < dominios_viejos[j][i].tiempo + Avion_llegada.Vector_Separacion_Tau[actual.id_avion-1]) {
+                        Viable = false;
+                    }
+
                 }
-                if (!ok) {
-                    valores_eliminados++;
-                    continue;
-                }
+
             }
-            aux.push_back(opt_j);
-        }
 
-        if (aux.empty()) {
-            podas_forward++; 
-            return false; 
+            if(Viable){
+                Nuevo_dom.push_back(dominios_viejos[j][i]);
+            }
         }
-        dominios_nuevos[j] = std::move(aux);
+        if(Nuevo_dom.empty()){
+            return false;
+        }
+        dominios_nuevos[j] = Nuevo_dom;
+
     }
     return true;
 }
 
-void forward_checking(int idx, double costo_acumulado, const vector<vector<Opcion>>& dominios, int p_actual) {
-    nodos_explorados++;
-    nodos_por_nivel[idx]++;
-
-    // Control de 5 minutos
-    if (nodos_explorados % 10000 == 0) {
-        auto ahora = chrono::high_resolution_clock::now();
-        if (chrono::duration_cast<chrono::seconds>(ahora - hora_inicio_algoritmo).count() > 300) return;
-    }
-
-    // Caso Base: Solución Encontrada
-    if (idx == total_aviones) {
-        if (costo_acumulado < mejor_costo) {
-            mejor_costo = costo_acumulado;
-            auto ahora = chrono::high_resolution_clock::now();
-            double t = chrono::duration_cast<chrono::milliseconds>(ahora - hora_inicio_algoritmo).count() / 1000.0;
-            
-            registro_tiempos.push_back(t);
-            registro_costos.push_back(mejor_costo);
-            
-            cout << "  [LOG] Nuevo óptimo: " << mejor_costo << " en " << t << "s" << endl;
+void forward_checking(int id,float Costo_acumulado , const vector<vector<Opcion>>& dominios) {
+    if(id == dominios.size()){
+        if(Costo_acumulado < mejor_costo){
+            mejor_costo = Costo_acumulado;
         }
         return;
     }
 
-    // Poda por Costo
-    if (costo_acumulado >= mejor_costo) {
-        podas_costo++;
+    if(Costo_acumulado >= mejor_costo){
         return;
     }
 
-    for (const auto& opt : dominios[idx]) {
-        double nuevo_costo = costo_acumulado + opt.costo_individual;
-        if (nuevo_costo >= mejor_costo) {
-            podas_costo++;
+    for(int i = 0; i < dominios[id].size(); i++){
+        float nuevo_costo = Costo_acumulado + dominios[id][i].costo_individual;
+        if (nuevo_costo >= mejor_costo){
+
             continue;
-        }
 
+        } 
         vector<vector<Opcion>> dominios_futuros;
-        if (filtrar_dominios(idx, opt, dominios, dominios_futuros)) {
-            forward_checking(idx + 1, nuevo_costo, dominios_futuros, p_actual);
+
+        if(Acotar_Arbol(id,dominios[id][i],dominios,dominios_futuros)){
+            forward_checking(id+1,nuevo_costo,dominios_futuros);
         }
     }
+
+
 }
 
 int main() {
     string archivo = "Test_Case/case4.txt"; 
-    cargarArchivo(archivo, lista_aviones, total_aviones);
-    if (lista_aviones.empty()) return 1;
+    cargarArchivo(archivo, Aviones, Cantidad_de_Aviones);
 
-    sort(lista_aviones.begin(), lista_aviones.end(), [](const Avion& a, const Avion& b) {
+    if (Aviones.empty()) return 1;
+
+    // Abrir archivo CSV y escribir cabecera
+
+    sort(Aviones.begin(), Aviones.end(), [](const Avion& a, const Avion& b) {
         return a.Pk < b.Pk;
     });
 
-    ofstream file_res("metricas_finales.csv");
-    file_res << "Pistas,Mejor_Costo,Nodos,Podas_FC,Podas_BB,Valores_Borrados" << endl;
-
-    for (int p_count = 1; p_count <= 3; ++p_count) {
+    for (int p_count = 3; p_count <= 3; ++p_count) { 
         mejor_costo = numeric_limits<double>::infinity();
-        nodos_explorados = 0; podas_forward = 0; podas_costo = 0; valores_eliminados = 0;
-        nodos_por_nivel.assign(total_aviones + 1, 0);
-        registro_tiempos.clear(); registro_costos.clear();
 
-        // Inicializar dominios
-        vector<vector<Opcion>> dominios_ini(total_aviones);
-        for (int i = 0; i < total_aviones; ++i) {
+
+        vector<vector<Opcion>> dominios_iniciales(Cantidad_de_Aviones);
+        for (int i = 0; i < Cantidad_de_Aviones; ++i) {
             for (int p = 0; p < p_count; ++p) {
-                for (int t = lista_aviones[i].Ek; t <= lista_aviones[i].Lk; ++t) {
-                    dominios_ini[i].push_back({p, t, lista_aviones[i].Calcular_Penalizaciones(t)});
+                for (int t = Aviones[i].Ek; t <= Aviones[i].Lk; ++t) {
+                    double c = Aviones[i].Calcular_Penalizaciones(t);
+                    dominios_iniciales[i].push_back({p, t, c});
                 }
             }
-            sort(dominios_ini[i].begin(), dominios_ini[i].end(), [](const Opcion& a, const Opcion& b){
+            sort(dominios_iniciales[i].begin(), dominios_iniciales[i].end(), [](const Opcion& a, const Opcion& b){
                 return a.costo_individual < b.costo_individual;
             });
         }
 
-        cout << "\n>>> TEST: " << p_count << " PISTAS" << endl;
-        hora_inicio_algoritmo = chrono::high_resolution_clock::now();
-        forward_checking(0, 0.0, dominios_ini, p_count);
-
-        // Guardar métricas resumen
-        file_res << p_count << "," << mejor_costo << "," << nodos_explorados << "," 
-                 << podas_forward << "," << podas_costo << "," << valores_eliminados << endl;
-
-        // Guardar curva de convergencia para este p_count
-        ofstream file_conv("convergencia_p" + to_string(p_count) + ".csv");
-        file_conv << "Tiempo,Costo" << endl;
-        for(size_t i=0; i<registro_tiempos.size(); ++i) 
-            file_conv << registro_tiempos[i] << "," << registro_costos[i] << endl;
+        cout << "\n>>> Iniciando prueba: " << p_count << " pistas." << endl;
         
-        // Guardar perfil del árbol
-        ofstream file_tree("perfil_p" + to_string(p_count) + ".csv");
-        file_tree << "Nivel,Nodos" << endl;
-        for(int i=0; i<=total_aviones; ++i) 
-            file_tree << i << "," << nodos_por_nivel[i] << endl;
+        forward_checking(0, 0.0, dominios_iniciales);
+
+        cout << "Terminado " << p_count << " pistas. Mejor: " << mejor_costo << endl;
     }
 
     return 0;
