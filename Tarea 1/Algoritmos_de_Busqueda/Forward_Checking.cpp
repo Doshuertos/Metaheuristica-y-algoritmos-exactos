@@ -3,10 +3,9 @@
 #include <algorithm>
 #include <limits>
 #include <chrono>
-#include <iomanip>
-#include <fstream> 
+#include <fstream>
 
-#include "Lector.h" 
+#include "Lector.h"
 #include "Avion.h"
 
 using namespace std;
@@ -17,14 +16,14 @@ struct Opcion {
     double costo_individual;
 };
 
-// -------- MÉTRICAS GLOBALES --------
+// -------- METRICAS GLOBALES --------
 double mejor_costo = numeric_limits<double>::infinity();
 long long nodos_explorados = 0;
-long long podas_forward = 0;      // Por dominio vacío
-long long podas_costo = 0;        // Por Branch & Bound
-long long valores_eliminados = 0; // Total de (t,p) quitados por FC
+long long podas_mfc = 0;
+long long podas_costo = 0;
+long long chequeos_futuros = 0;
+long long opciones_probadas = 0;
 
-// Vectores para gráficos
 vector<double> registro_tiempos;
 vector<double> registro_costos;
 vector<long long> nodos_por_nivel;
@@ -32,69 +31,87 @@ vector<long long> nodos_por_nivel;
 int total_aviones;
 vector<Avion> lista_aviones;
 auto hora_inicio_algoritmo = chrono::high_resolution_clock::now();
+const int TIEMPO_LIMITE_SEG = 240;
+vector<Opcion> asignaciones;
 
-bool filtrar_dominios(int idx_actual, const Opcion& asig, 
-                      const vector<vector<Opcion>>& dominios_viejos, 
-                      vector<vector<Opcion>>& dominios_nuevos) {
-    
-    dominios_nuevos = dominios_viejos;
-    const Avion& av_i = lista_aviones[idx_actual];
+// Separacion global: aplica entre CUALQUIER par de aviones, sin importar pista
+bool son_compatibles(const Avion& av_i, const Opcion& asig_i,
+                     const Avion& av_j, const Opcion& asig_j) {
+    if (asig_i.tiempo < asig_j.tiempo) {
+        return asig_j.tiempo >= asig_i.tiempo + av_i.Vector_Separacion_Tau[av_j.id_avion - 1];
+    } else {
+        return asig_i.tiempo >= asig_j.tiempo + av_j.Vector_Separacion_Tau[av_i.id_avion - 1];
+    }
+}
 
-    for (int j = idx_actual + 1; j < total_aviones; ++j) {
-        vector<Opcion> aux;
-        const Avion& av_j = lista_aviones[j];
-
-        for (const auto& opt_j : dominios_viejos[j]) {
-            if (opt_j.pista == asig.pista) {
-                bool ok = true;
-                if (asig.tiempo < opt_j.tiempo) {
-                    if (opt_j.tiempo < asig.tiempo + av_i.Vector_Separacion_Tau[av_j.id_avion - 1]) ok = false;
-                } else {
-                    if (asig.tiempo < opt_j.tiempo + av_j.Vector_Separacion_Tau[av_i.id_avion - 1]) ok = false;
-                }
-                if (!ok) {
-                    valores_eliminados++;
-                    continue;
-                }
-            }
-            aux.push_back(opt_j);
+bool consistente_con_pasado(int idx_actual, const Opcion& asig_actual) {
+    const Avion& av_actual = lista_aviones[idx_actual];
+    for (int i = 0; i < idx_actual; ++i) {
+        if (!son_compatibles(lista_aviones[i], asignaciones[i], av_actual, asig_actual)) {
+            return false;
         }
-
-        if (aux.empty()) {
-            podas_forward++; 
-            return false; 
-        }
-        dominios_nuevos[j] = std::move(aux);
     }
     return true;
 }
 
-void forward_checking(int idx, double costo_acumulado, const vector<vector<Opcion>>& dominios, int p_actual) {
+// MFC: para cada avion futuro j, verifica que exista AL MENOS UNA opcion
+// compatible con todo el prefijo (0..idx_actual). Apenas la encuentra, avanza.
+// Si ningun valor del dominio de j es compatible, poda inmediatamente.
+bool verificar_futuro_minimo(int idx_actual, const vector<vector<Opcion>>& dominios) {
+    for (int j = idx_actual + 1; j < total_aviones; ++j) {
+        chequeos_futuros++;
+        const Avion& av_j = lista_aviones[j];
+        bool existe_opcion_valida = false;
+
+        for (const auto& opt_j : dominios[j]) {
+            opciones_probadas++;
+            bool compatible = true;
+
+            for (int i = 0; i <= idx_actual; ++i) {
+                if (!son_compatibles(lista_aviones[i], asignaciones[i], av_j, opt_j)) {
+                    compatible = false;
+                    break;
+                }
+            }
+
+            if (compatible) {
+                existe_opcion_valida = true;
+                break; // Minimal: apenas encuentra una opcion valida, para
+            }
+        }
+
+        if (!existe_opcion_valida) {
+            podas_mfc++;
+            return false;
+        }
+    }
+    return true;
+}
+
+void minimal_forward_checking(int idx, double costo_acumulado,
+                              const vector<vector<Opcion>>& dominios, int p_actual) {
     nodos_explorados++;
     nodos_por_nivel[idx]++;
 
-    // Control de 5 minutos
     if (nodos_explorados % 10000 == 0) {
         auto ahora = chrono::high_resolution_clock::now();
-        if (chrono::duration_cast<chrono::seconds>(ahora - hora_inicio_algoritmo).count() > 300) return;
+        if (chrono::duration_cast<chrono::seconds>(ahora - hora_inicio_algoritmo).count() > TIEMPO_LIMITE_SEG) {
+            return;
+        }
     }
 
-    // Caso Base: Solución Encontrada
     if (idx == total_aviones) {
         if (costo_acumulado < mejor_costo) {
             mejor_costo = costo_acumulado;
             auto ahora = chrono::high_resolution_clock::now();
             double t = chrono::duration_cast<chrono::milliseconds>(ahora - hora_inicio_algoritmo).count() / 1000.0;
-            
             registro_tiempos.push_back(t);
             registro_costos.push_back(mejor_costo);
-            
-            cout << "  [LOG] Nuevo óptimo: " << mejor_costo << " en " << t << "s" << endl;
+            cout << "  [LOG MFC] Nuevo optimo: " << mejor_costo << " en " << t << "s" << endl;
         }
         return;
     }
 
-    // Poda por Costo
     if (costo_acumulado >= mejor_costo) {
         podas_costo++;
         return;
@@ -107,15 +124,20 @@ void forward_checking(int idx, double costo_acumulado, const vector<vector<Opcio
             continue;
         }
 
-        vector<vector<Opcion>> dominios_futuros;
-        if (filtrar_dominios(idx, opt, dominios, dominios_futuros)) {
-            forward_checking(idx + 1, nuevo_costo, dominios_futuros, p_actual);
+        if (!consistente_con_pasado(idx, opt)) {
+            continue;
+        }
+
+        asignaciones[idx] = opt;
+
+        if (verificar_futuro_minimo(idx, dominios)) {
+            minimal_forward_checking(idx + 1, nuevo_costo, dominios, p_actual);
         }
     }
 }
 
 int main() {
-    string archivo = "Test_Case/case4.txt"; 
+    string archivo = "Test_Case/case2.txt";
     cargarArchivo(archivo, lista_aviones, total_aviones);
     if (lista_aviones.empty()) return 1;
 
@@ -123,16 +145,21 @@ int main() {
         return a.Pk < b.Pk;
     });
 
-    ofstream file_res("metricas_finales.csv");
-    file_res << "Pistas,Mejor_Costo,Nodos,Podas_FC,Podas_BB,Valores_Borrados" << endl;
+    ofstream file_res("metricas_mfc.csv");
+    file_res << "Pistas,Mejor_Costo,Nodos,Podas_MFC,Podas_BB,Chequeos_Futuros,Opciones_Probadas" << endl;
 
     for (int p_count = 1; p_count <= 3; ++p_count) {
         mejor_costo = numeric_limits<double>::infinity();
-        nodos_explorados = 0; podas_forward = 0; podas_costo = 0; valores_eliminados = 0;
+        nodos_explorados = 0;
+        podas_mfc = 0;
+        podas_costo = 0;
+        chequeos_futuros = 0;
+        opciones_probadas = 0;
         nodos_por_nivel.assign(total_aviones + 1, 0);
-        registro_tiempos.clear(); registro_costos.clear();
+        registro_tiempos.clear();
+        registro_costos.clear();
+        asignaciones.assign(total_aviones, {-1, -1, 0.0});
 
-        // Inicializar dominios
         vector<vector<Opcion>> dominios_ini(total_aviones);
         for (int i = 0; i < total_aviones; ++i) {
             for (int p = 0; p < p_count; ++p) {
@@ -140,29 +167,27 @@ int main() {
                     dominios_ini[i].push_back({p, t, lista_aviones[i].Calcular_Penalizaciones(t)});
                 }
             }
-            sort(dominios_ini[i].begin(), dominios_ini[i].end(), [](const Opcion& a, const Opcion& b){
+            sort(dominios_ini[i].begin(), dominios_ini[i].end(), [](const Opcion& a, const Opcion& b) {
                 return a.costo_individual < b.costo_individual;
             });
         }
 
-        cout << "\n>>> TEST: " << p_count << " PISTAS" << endl;
+        cout << "\n>>> TEST MFC: " << p_count << " PISTAS" << endl;
         hora_inicio_algoritmo = chrono::high_resolution_clock::now();
-        forward_checking(0, 0.0, dominios_ini, p_count);
+        minimal_forward_checking(0, 0.0, dominios_ini, p_count);
 
-        // Guardar métricas resumen
-        file_res << p_count << "," << mejor_costo << "," << nodos_explorados << "," 
-                 << podas_forward << "," << podas_costo << "," << valores_eliminados << endl;
+        file_res << p_count << "," << mejor_costo << "," << nodos_explorados << ","
+                 << podas_mfc << "," << podas_costo << "," << chequeos_futuros << ","
+                 << opciones_probadas << endl;
 
-        // Guardar curva de convergencia para este p_count
-        ofstream file_conv("convergencia_p" + to_string(p_count) + ".csv");
+        ofstream file_conv("convergencia_mfc_p" + to_string(p_count) + ".csv");
         file_conv << "Tiempo,Costo" << endl;
-        for(size_t i=0; i<registro_tiempos.size(); ++i) 
+        for (size_t i = 0; i < registro_tiempos.size(); ++i)
             file_conv << registro_tiempos[i] << "," << registro_costos[i] << endl;
-        
-        // Guardar perfil del árbol
-        ofstream file_tree("perfil_p" + to_string(p_count) + ".csv");
+
+        ofstream file_tree("perfil_mfc_p" + to_string(p_count) + ".csv");
         file_tree << "Nivel,Nodos" << endl;
-        for(int i=0; i<=total_aviones; ++i) 
+        for (int i = 0; i <= total_aviones; ++i)
             file_tree << i << "," << nodos_por_nivel[i] << endl;
     }
 
