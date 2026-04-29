@@ -1,0 +1,116 @@
+MFC (Minimal Forward Checking)
+----------------------------------------
+Mejor Costo: 13585.8
+
+Pista 1:
+  [T=1027] Avion 2
+  [T=1438] Avion 3
+  [T=1506] Avion 8
+  [T=1619] Avion 4
+  [T=2048] Avion 13
+  [T=3054] Avion 23
+  [T=3258] Avion 25
+  [T=3649] Avion 31
+  [T=4192] Avion 35
+  [T=4695] Avion 40
+  [T=4988] Avion 39
+  [T=5373] Avion 47
+  [T=5509] Avion 45
+  [T=5599] Avion 46
+  [T=5916] Avion 48
+  [T=6097] Avion 52
+  [T=6436] Avion 59
+  [T=6617] Avion 58
+  [T=6730] Avion 56
+  [T=7824] Avion 64
+  [T=8170] Avion 66
+  [T=8373] Avion 69
+  [T=8441] Avion 70
+  [T=8509] Avion 72
+  [T=9293] Avion 74
+  [T=9796] Avion 77
+  [T=9988] Avion 76
+  [T=10300] Avion 78
+  [T=10943] Avion 84
+  [T=11192] Avion 86
+  [T=11373] Avion 90
+  [T=11553] Avion 91
+  [T=11959] Avion 93
+  [T=12049] Avion 95
+  [T=12387] Avion 98
+Pista 2:
+  [T=1845] Avion 5
+  [T=2116] Avion 11
+  [T=2229] Avion 14
+  [T=2365] Avion 17
+  [T=2455] Avion 18
+  [T=2986] Avion 22
+  [T=3581] Avion 30
+  [T=4011] Avion 28
+  [T=4079] Avion 33
+  [T=4469] Avion 37
+  [T=4785] Avion 38
+  [T=5224] Avion 44
+  [T=5441] Avion 42
+  [T=5667] Avion 43
+  [T=5780] Avion 50
+  [T=5848] Avion 51
+  [T=6210] Avion 54
+  [T=6300] Avion 53
+  [T=6368] Avion 55
+  [T=6867] Avion 60
+  [T=7635] Avion 63
+  [T=8080] Avion 67
+  [T=8715] Avion 71
+  [T=8903] Avion 73
+  [T=9508] Avion 75
+  [T=10108] Avion 79
+  [T=10666] Avion 80
+  [T=10734] Avion 81
+  [T=11011] Avion 83
+  [T=11124] Avion 88
+  [T=11713] Avion 92
+  [T=12550] Avion 99
+  [T=12655] Avion 97
+Pista 3:
+  [T=908] Avion 1
+  [T=1235] Avion 6
+  [T=1348] Avion 10
+  [T=1709] Avion 7
+  [T=1777] Avion 9
+  [T=1935] Avion 12
+  [T=2297] Avion 16
+  [T=2545] Avion 15
+  [T=2635] Avion 20
+  [T=2781] Avion 19
+  [T=2918] Avion 24
+  [T=3144] Avion 21
+  [T=3468] Avion 27
+  [T=3762] Avion 29
+  [T=3830] Avion 26
+  [T=3898] Avion 34
+  [T=4282] Avion 32
+  [T=4350] Avion 36
+  [T=4875] Avion 41
+  [T=6029] Avion 49
+  [T=6549] Avion 57
+  [T=6972] Avion 61
+  [T=7439] Avion 62
+  [T=8012] Avion 65
+  [T=8283] Avion 68
+  [T=10515] Avion 85
+  [T=10847] Avion 82
+  [T=11305] Avion 87
+  [T=11463] Avion 89
+  [T=11891] Avion 94
+  [T=12319] Avion 96
+  [T=12723] Avion 100
+
+METRICAS
+Nodos explorados:     1775541
+Soluciones factibles: 1
+Podas MFC:            0
+Podas B&B:            9510031487
+Chequeos futuros:     1803936
+Opciones probadas:    367740379
+Timeout:              SI

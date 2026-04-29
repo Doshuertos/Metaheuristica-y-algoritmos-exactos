@@ -1,0 +1,36 @@
+MFC (Minimal Forward Checking)
+----------------------------------------
+Mejor Costo: 1610
+
+Pista 1:
+  [T=229] Avion 7
+  [T=287] Avion 18
+  [T=409] Avion 16
+Pista 2:
+  [T=114] Avion 8
+  [T=154] Avion 11
+  [T=162] Avion 19
+  [T=170] Avion 20
+  [T=197] Avion 2
+  [T=258] Avion 15
+  [T=316] Avion 14
+Pista 3:
+  [T=82] Avion 1
+  [T=106] Avion 6
+  [T=122] Avion 4
+  [T=130] Avion 12
+  [T=138] Avion 10
+  [T=146] Avion 9
+  [T=185] Avion 3
+  [T=261] Avion 5
+  [T=336] Avion 13
+  [T=339] Avion 17
+
+METRICAS
+Nodos explorados:     107276270
+Soluciones factibles: 3
+Podas MFC:            0
+Podas B&B:            176898251862
+Chequeos futuros:     288808017
+Opciones probadas:    867635986
+Timeout:              SI

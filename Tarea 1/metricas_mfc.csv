@@ -1,4 +1,2 @@
-Pistas,Mejor_Costo,Nodos,Podas_MFC,Podas_BB,Chequeos_Futuros,Opciones_Probadas
-1,13576.8,6166476,0,11017680693,6473440,428449973
-2,569.99,2996794,0,10764999181,18547567,620751112
-3,75.75,3291915,0,17656712783,108782756,767250019
+Pistas,Mejor_Costo,Nodos_Explorados,Soluciones_Factibles,Podas_MFC,Podas_BB,Chequeos_Futuros,Opciones_Probadas
+3,13585.8,1775541,1,0,9510031487,1803936,367740379
