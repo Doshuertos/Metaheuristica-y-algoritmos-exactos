@@ -8,8 +8,10 @@
 
 #include "Lector.h"
 #include "Avion.h"
+#include "Opciones.h"
 
 using namespace std;
+//Codigo Original(el Codigo FC es para recolectar las estadisticas de la ejecucion), donde la IA aporto al codificar la solucion, siendo guia y correctora de este. (Se intento hacer gran parte a mano, y explicando detalle por detalle)
 
 struct Opcion {
     int pista;
@@ -102,7 +104,7 @@ void forward_checking(int idx, double costo_acumulado, const vector<vector<Opcio
 
     for(int i = 0; i < dominios[id].size(); i++){
         float nuevo_costo = Costo_acumulado + dominios[id][i].costo_individual;
-        if (nuevo_costo >= mejor_costo){
+        if (nuevo_costo >= mejor_costo){ //Solo si obtiene mayor costo empieza a descarta la opcion
 
             continue;
         }
