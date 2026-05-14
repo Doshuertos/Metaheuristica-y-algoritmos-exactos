@@ -1,0 +1,4 @@
+Para Ejecutar el proceso del Forward_Checking se ejecuta el siguiente comando en terminar Unix : 
+g++ -std=c++17 -IAlgoritmos_de_Busqueda -IClase -IMain -IUtilidades Main/main.cpp Algoritmos_de_Busqueda/FC.cpp Clase/Clase_Avion.cpp Utilidades/Cargar_archivo.cpp Utilidades/Factivilidad.cpp -o Forward_Checking 
+Este Creara un Ejecutable del codigo para poder ver su funcionamiento para ejecutarlo es ./Forward_Checking, Tiene cargado los datos del Case 4, y itera los 3 casos (1,2,3 Pistas), Donde se puede cambiar la variable del main 
+for (int p_count = 1; p_count <= 3; ++p_count), el int p_count = 1 por 1 2 o 3 para las pistas, Este genera un csv en la carpeta Resultados de Ejecucion, (tiene de nombre HardCodeado Datos33_pistas_N). UWU
