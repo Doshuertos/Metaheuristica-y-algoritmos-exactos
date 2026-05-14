@@ -5,16 +5,16 @@
 #include <chrono>
 #include <iomanip>
 #include <fstream> 
-#include <filesystem> // <--- AGREGADO
+#include <filesystem> 
 
 #include "Lector.h" 
 #include "Avion.h"
 #include "Opciones.h"
 
 using namespace std;
-namespace fs = std::filesystem; // <--- AGREGADO: Alias para carpetas
+namespace fs = std::filesystem; 
 
-// ---------------- EXTERN ----------------
+
 // Asegúrate de que en el otro archivo .cpp estas variables NO tengan el 'extern'
 extern vector<Avion> Aviones;
 extern int Cantidad_de_Aviones;
@@ -23,8 +23,7 @@ extern long long nodos_explorados;
 extern long long podas;
 extern chrono::high_resolution_clock::time_point hora_inicio_algoritmo;
 
-// ---------------- PROTOTIPO ----------------
-// Agregado para que el main reconozca la función
+
 void forward_checking(int id, float Costo_acumulado, const vector<vector<Opcion>>& dominios, ofstream& archivo);
 
 int main() {
@@ -49,7 +48,7 @@ int main() {
         podas = 0;
         hora_inicio_algoritmo = chrono::high_resolution_clock::now();
 
-        string nombre_archivo = ruta_carpeta + "/datos4_pistas_" + to_string(p_count) + ".csv";
+        string nombre_archivo = ruta_carpeta + "/datos33_pistas_" + to_string(p_count) + ".csv";
         ofstream archivo_csv(nombre_archivo);
         
         if (!archivo_csv.is_open()) {
